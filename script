@@ -1,0 +1,128 @@
+local Players = game:GetService("Players")
+local UIS = game:GetService("UserInputService")
+local CoreGui = game:GetService("CoreGui")
+
+local ScreenGui = Instance.new("ScreenGui")
+local Frame = Instance.new("Frame")
+local KillBrickToggle = Instance.new("TextButton")
+local TPtoCoordsBtn = Instance.new("TextButton")
+local TPtoKillerBtn = Instance.new("TextButton")
+local Title = Instance.new("TextLabel")
+
+ScreenGui.Parent = CoreGui
+ScreenGui.Name = "KillBrickControl"
+ScreenGui.ResetOnSpawn = false
+
+Frame.Parent = ScreenGui
+Frame.Size = UDim2.new(0, 200, 0, 150)
+Frame.Position = UDim2.new(0.5, -100, 0.5, -75)
+Frame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+
+Title.Parent = Frame
+Title.Text = "KillBrick Controller"
+Title.Size = UDim2.new(1, 0, 0, 30)
+Title.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+
+KillBrickToggle.Parent = Frame
+KillBrickToggle.Text = "Удалить KillBricks"
+KillBrickToggle.Size = UDim2.new(0.9, 0, 0, 30)
+KillBrickToggle.Position = UDim2.new(0.05, 0, 0.25, 0)
+KillBrickToggle.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+KillBrickToggle.TextColor3 = Color3.fromRGB(255, 255, 255)
+
+TPtoCoordsBtn.Parent = Frame
+TPtoCoordsBtn.Text = "ТП на (-66,228,-13)"
+TPtoCoordsBtn.Size = UDim2.new(0.9, 0, 0, 30)
+TPtoCoordsBtn.Position = UDim2.new(0.05, 0, 0.5, 0)
+TPtoCoordsBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+TPtoCoordsBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+
+TPtoKillerBtn.Parent = Frame
+TPtoKillerBtn.Text = "ТП к убийце (224,100,22)"
+TPtoKillerBtn.Size = UDim2.new(0.9, 0, 0, 30)
+TPtoKillerBtn.Position = UDim2.new(0.05, 0, 0.75, 0)
+TPtoKillerBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+TPtoKillerBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+
+local killBricksRemoved = false
+local killBricksCache = {}
+
+local function toggleKillBricks()
+    if not killBricksRemoved then
+        killBricksCache = {}
+        for _, obj in ipairs(workspace:GetDescendants()) do
+            if (obj.Name:lower():find("kill") or obj.Name:lower():find("death")) and (obj:IsA("BasePart") or obj:IsA("Model")) then
+                table.insert(killBricksCache, {
+                    Object = obj,
+                    Parent = obj.Parent,
+                    Position = obj:IsA("BasePart") and obj.Position or nil,
+                    CFrame = obj:IsA("BasePart") and obj.CFrame or nil
+                })
+                obj:Destroy()
+            end
+        end
+        KillBrickToggle.Text = "Восстановить KillBricks"
+        killBricksRemoved = true
+    else
+        for _, data in ipairs(killBricksCache) do
+            if data.Object and not data.Object.Parent then
+                data.Object.Parent = data.Parent
+                if data.Object:IsA("BasePart") then
+                    if data.Position then data.Object.Position = data.Position
+                    elseif data.CFrame then data.Object.CFrame = data.CFrame end
+                end
+            end
+        end
+        KillBrickToggle.Text = "Удалить KillBricks"
+        killBricksRemoved = false
+        killBricksCache = {}
+    end
+end
+
+local function teleportToCoords()
+    local char = Players.LocalPlayer.Character
+    if char and char:FindFirstChild("HumanoidRootPart") then
+        char.HumanoidRootPart.CFrame = CFrame.new(-66, 228, -13)
+    end
+end
+
+local function teleportToKillerSpot()
+    local char = Players.LocalPlayer.Character
+    if char and char:FindFirstChild("HumanoidRootPart") then
+        char.HumanoidRootPart.CFrame = CFrame.new(224, 100, 22)
+    end
+end
+
+KillBrickToggle.MouseButton1Click:Connect(toggleKillBricks)
+TPtoCoordsBtn.MouseButton1Click:Connect(teleportToCoords)
+TPtoKillerBtn.MouseButton1Click:Connect(teleportToKillerSpot)
+
+local dragging = false
+local dragInput, dragStart, startPos
+
+Frame.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        dragging = true
+        dragStart = input.Position
+        startPos = Frame.Position
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                dragging = false
+            end
+        end)
+    end
+end)
+
+Frame.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement then
+        dragInput = input
+    end
+end)
+
+UIS.InputChanged:Connect(function(input)
+    if dragging and input == dragInput then
+        local delta = input.Position - dragStart
+        Frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+    end
+end)
